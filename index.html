@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC Wave Forecast - Immersive 3D Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            text-align: center;
+            z-index: 100;
+        }
+
+        .loading-wave {
+            display: inline-block;
+            animation: wave 1.5s ease-in-out infinite;
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .location-card {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            min-width: 280px;
+            pointer-events: all;
+            transition: all 0.3s ease;
+        }
+
+        .location-card:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .location-card.smith-point {
+            top: 30px;
+            right: 30px;
+        }
+
+        .location-card.brick {
+            top: 30px;
+            left: 30px;
+        }
+
+        .location-name {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .location-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #00a8ff, #0066cc);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wave-stats {
+            display: grid;
+            gap: 12px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .wave-height {
+            color: #00ff88;
+        }
+
+        .period {
+            color: #00a8ff;
+        }
+
+        .wind {
+            color: #ffcc00;
+        }
+
+        .surf-quality {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .surf-quality.excellent {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+        }
+
+        .surf-quality.good {
+            background: rgba(0, 168, 255, 0.2);
+            border: 1px solid #00a8ff;
+            color: #00a8ff;
+        }
+
+        .surf-quality.fair {
+            background: rgba(255, 204, 0, 0.2);
+            border: 1px solid #ffcc00;
+            color: #ffcc00;
+        }
+
+        .surf-quality.poor {
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+        }
+
+        #timeline {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 20px 40px;
+            pointer-events: all;
+        }
+
+        .timeline-container {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .timeline-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .timeline-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .timeline-display {
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .timeline-date {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .timeline-time {
+            color: #888;
+            font-size: 14px;
+        }
+
+        #controls {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 15px 30px;
+            pointer-events: all;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .control-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .control-btn.active {
+            background: rgba(0, 168, 255, 0.3);
+            border-color: #00a8ff;
+        }
+
+        @media (max-width: 768px) {
+            .location-card {
+                position: relative;
+                top: auto;
+                left: auto;
+                right: auto;
+                margin: 10px;
+                min-width: auto;
+            }
+
+            #timeline {
+                bottom: 10px;
+                padding: 15px 20px;
+            }
+
+            #controls {
+                top: 10px;
+                flex-wrap: wrap;
+                padding: 10px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="loading-wave">🌊</div>
+        <div>Loading Wave Forecast...</div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-overlay">
+        <div id="controls">
+            <button class="control-btn active" data-view="3d">3D Ocean View</button>
+            <button class="control-btn" data-view="map">Map View</button>
+            <button class="control-btn" data-view="split">Split View</button>
+        </div>
+
+        <div class="location-card smith-point">
+            <div class="location-name">
+                <div class="location-icon">🏄</div>
+                Smith Point, Long Island
+            </div>
+            <div class="wave-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Wave Height</span>
+                    <span class="stat-value wave-height">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Period</span>
+                    <span class="stat-value period">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Wind</span>
+                    <span class="stat-value wind">--</span>
+                </div>
+            </div>
+            <div class="surf-quality">Loading...</div>
+        </div>
+
+        <div class="location-card brick">
+            <div class="location-name">
+                <div class="location-icon">🏄</div>
+                Brick, Jersey Shore
+            </div>
+            <div class="wave-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Wave Height</span>
+                    <span class="stat-value wave-height">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Period</span>
+                    <span class="stat-value period">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Wind</span>
+                    <span class="stat-value wind">--</span>
+                </div>
+            </div>
+            <div class="surf-quality">Loading...</div>
+        </div>
+
+        <div id="timeline">
+            <div class="timeline-container">
+                <div class="timeline-controls">
+                    <button class="timeline-btn" id="prev-time">◀</button>
+                    <button class="timeline-btn" id="play-pause">▶</button>
+                    <button class="timeline-btn" id="next-time">▶</button>
+                </div>
+                <div class="timeline-display">
+                    <div class="timeline-date">--</div>
+                    <div class="timeline-time">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
