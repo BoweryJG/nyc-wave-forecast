@@ -8,6 +8,7 @@ import { WaveDataService } from './services/WaveDataService';
 import { PhotorealisticOcean } from './components/PhotorealisticOcean';
 import { CinematicLocationSystem } from './components/CinematicLocationSystem';
 import { InnovativeForecastUI } from './components/InnovativeForecastUI';
+import { Shark } from './components/Shark';
 import './styles/photorealistic.css';
 
 class WaveForecastApp {
@@ -31,6 +32,7 @@ class WaveForecastApp {
         
         this.clock = new THREE.Clock();
         this.forecastData = null;
+        this.isNightMode = false;
         
         this.init();
     }
@@ -45,6 +47,7 @@ class WaveForecastApp {
         this.ocean = new PhotorealisticOcean(this.scene);
         this.locationSystem = new CinematicLocationSystem(this.scene);
         this.forecastUI = new InnovativeForecastUI();
+        this.shark = new Shark(this.scene);
         
         this.waveDataService = new WaveDataService();
         
@@ -196,6 +199,13 @@ class WaveForecastApp {
             this.locationSystem.focusLocation(e.detail, this.camera, this.controls);
         });
         
+        // Shark attack on 'S' key
+        window.addEventListener('keypress', (e) => {
+            if (e.key.toLowerCase() === 's' && !e.metaKey && !e.ctrlKey) {
+                this.shark.attack();
+            }
+        });
+        
         // Keyboard controls for cinematic views
         window.addEventListener('keypress', (e) => {
             switch(e.key) {
@@ -262,6 +272,14 @@ class WaveForecastApp {
         });
     }
 
+    toggleNightMode() {
+        this.isNightMode = !this.isNightMode;
+        
+        if (this.ocean) {
+            this.ocean.setNightMode(this.isNightMode);
+        }
+    }
+
     onWindowResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
@@ -318,6 +336,23 @@ const createCinematicControls = () => {
     });
 };
 
+// Create night mode toggle
+const createNightModeToggle = () => {
+    const toggle = document.createElement('div');
+    toggle.className = 'night-toggle';
+    toggle.innerHTML = '<div class="night-toggle-slider"></div>';
+    document.getElementById('ui-overlay').appendChild(toggle);
+    
+    toggle.addEventListener('click', () => {
+        app.toggleNightMode();
+        toggle.classList.toggle('night');
+        document.body.classList.toggle('night-mode');
+    });
+    
+    return toggle;
+};
+
 // Initialize app
 const app = new WaveForecastApp();
 createCinematicControls();
+createNightModeToggle();

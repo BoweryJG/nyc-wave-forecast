@@ -14,6 +14,8 @@ export class PhotorealisticOcean {
             windDirection: 0
         };
         
+        this.isNightMode = false;
+        
         this.init();
     }
 
@@ -373,6 +375,95 @@ export class PhotorealisticOcean {
                     this.oceanMaterial.uniforms.wavePeriod.value = this.waveParams.period;
                 }
             }
+        });
+    }
+
+    setNightMode(isNight) {
+        this.isNightMode = isNight;
+        
+        if (this.oceanMaterial) {
+            // Transition to night colors
+            const targetShallow = isNight ? new THREE.Color(0x001a33) : new THREE.Color(0x00d4d4);
+            const targetMid = isNight ? new THREE.Color(0x001122) : new THREE.Color(0x0099cc);
+            const targetDeep = isNight ? new THREE.Color(0x000511) : new THREE.Color(0x003366);
+            const targetSunColor = isNight ? new THREE.Color(0x6699ff) : new THREE.Color(0xffd4a3);
+            
+            gsap.to(this.oceanMaterial.uniforms.waterShallow.value, {
+                r: targetShallow.r,
+                g: targetShallow.g,
+                b: targetShallow.b,
+                duration: 2
+            });
+            
+            gsap.to(this.oceanMaterial.uniforms.waterMid.value, {
+                r: targetMid.r,
+                g: targetMid.g,
+                b: targetMid.b,
+                duration: 2
+            });
+            
+            gsap.to(this.oceanMaterial.uniforms.waterDeep.value, {
+                r: targetDeep.r,
+                g: targetDeep.g,
+                b: targetDeep.b,
+                duration: 2
+            });
+            
+            gsap.to(this.oceanMaterial.uniforms.sunColor.value, {
+                r: targetSunColor.r,
+                g: targetSunColor.g,
+                b: targetSunColor.b,
+                duration: 2
+            });
+            
+            // Move sun/moon position
+            const lightPos = isNight ? 
+                new THREE.Vector3(-0.7, 0.6, -0.3).normalize() : 
+                new THREE.Vector3(0.7, 0.6, 0.3).normalize();
+                
+            gsap.to(this.oceanMaterial.uniforms.sunDirection.value, {
+                x: lightPos.x,
+                y: lightPos.y,
+                z: lightPos.z,
+                duration: 2
+            });
+        }
+        
+        // Update sky
+        const skyMesh = this.scene.children.find(child => child.type === 'Mesh' && child.geometry.type === 'SphereGeometry');
+        if (skyMesh && skyMesh.material.uniforms) {
+            const topColor = isNight ? new THREE.Color(0x000511) : new THREE.Color(0x5588aa);
+            const bottomColor = isNight ? new THREE.Color(0x0a1929) : new THREE.Color(0xffd4a3);
+            
+            gsap.to(skyMesh.material.uniforms.topColor.value, {
+                r: topColor.r,
+                g: topColor.g,
+                b: topColor.b,
+                duration: 2
+            });
+            
+            gsap.to(skyMesh.material.uniforms.bottomColor.value, {
+                r: bottomColor.r,
+                g: bottomColor.g,
+                b: bottomColor.b,
+                duration: 2
+            });
+        }
+        
+        // Update fog
+        const fogColor = isNight ? 0x0a1929 : 0xaabbcc;
+        const fogDensity = isNight ? 0.0006 : 0.0003;
+        
+        gsap.to(this.scene.fog.color, {
+            r: new THREE.Color(fogColor).r,
+            g: new THREE.Color(fogColor).g,
+            b: new THREE.Color(fogColor).b,
+            duration: 2
+        });
+        
+        gsap.to(this.scene.fog, {
+            density: fogDensity,
+            duration: 2
         });
     }
 
