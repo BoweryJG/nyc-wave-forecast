@@ -8,12 +8,12 @@ export class LocationMarkers {
         
         this.locations = {
             smithPoint: {
-                position: new THREE.Vector3(100, 10, -50),
+                position: new THREE.Vector3(150, 10, -100),
                 name: 'Smith Point',
                 color: 0x00ff88
             },
             brick: {
-                position: new THREE.Vector3(-100, 10, 50),
+                position: new THREE.Vector3(-150, 10, 100),
                 name: 'Brick',
                 color: 0x00a8ff
             }
@@ -32,34 +32,34 @@ export class LocationMarkers {
         const markerGroup = new THREE.Group();
         
         // Create a tall cylinder as a beacon
-        const beaconGeometry = new THREE.CylinderGeometry(2, 3, 40, 16);
+        const beaconGeometry = new THREE.CylinderGeometry(3, 5, 50, 16);
         const beaconMaterial = new THREE.MeshPhongMaterial({
-            color: location.color,
-            emissive: location.color,
-            emissiveIntensity: 0.3,
-            transparent: true,
-            opacity: 0.8
-        });
-        const beacon = new THREE.Mesh(beaconGeometry, beaconMaterial);
-        beacon.position.y = 20;
-        markerGroup.add(beacon);
-        
-        // Add a glowing sphere at the top
-        const sphereGeometry = new THREE.SphereGeometry(5, 16, 16);
-        const sphereMaterial = new THREE.MeshPhongMaterial({
             color: location.color,
             emissive: location.color,
             emissiveIntensity: 0.5,
             transparent: true,
             opacity: 0.9
         });
+        const beacon = new THREE.Mesh(beaconGeometry, beaconMaterial);
+        beacon.position.y = 25;
+        markerGroup.add(beacon);
+        
+        // Add a glowing sphere at the top
+        const sphereGeometry = new THREE.SphereGeometry(8, 32, 32);
+        const sphereMaterial = new THREE.MeshPhongMaterial({
+            color: location.color,
+            emissive: location.color,
+            emissiveIntensity: 0.7,
+            transparent: true,
+            opacity: 0.9
+        });
         const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-        sphere.position.y = 40;
+        sphere.position.y = 55;
         markerGroup.add(sphere);
         
         // Add a light source
-        const light = new THREE.PointLight(location.color, 2, 100);
-        light.position.y = 40;
+        const light = new THREE.PointLight(location.color, 3, 150);
+        light.position.y = 55;
         markerGroup.add(light);
         
         // Create text label with canvas
@@ -86,9 +86,35 @@ export class LocationMarkers {
             transparent: true
         });
         const sprite = new THREE.Sprite(spriteMaterial);
-        sprite.scale.set(40, 10, 1);
-        sprite.position.y = 55;
+        sprite.scale.set(50, 12, 1);
+        sprite.position.y = 75;
         markerGroup.add(sprite);
+        
+        // Add a ring on the water surface
+        const ringGeometry = new THREE.RingGeometry(15, 20, 32);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            color: location.color,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.6
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.1;
+        markerGroup.add(ring);
+        
+        // Add inner glowing ring
+        const innerRingGeometry = new THREE.RingGeometry(8, 15, 32);
+        const innerRingMaterial = new THREE.MeshBasicMaterial({
+            color: location.color,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.8
+        });
+        const innerRing = new THREE.Mesh(innerRingGeometry, innerRingMaterial);
+        innerRing.rotation.x = -Math.PI / 2;
+        innerRing.position.y = 0.2;
+        markerGroup.add(innerRing);
         
         // Position the marker
         markerGroup.position.copy(location.position);
@@ -119,11 +145,32 @@ export class LocationMarkers {
             yoyo: true
         });
         
+        // Add ring pulsing animation
+        gsap.to(ring.scale, {
+            x: 1.2,
+            y: 1.2,
+            duration: 2,
+            ease: "power1.inOut",
+            repeat: -1,
+            yoyo: true
+        });
+        
+        gsap.to(innerRing.scale, {
+            x: 0.8,
+            y: 0.8,
+            duration: 2,
+            ease: "power1.inOut",
+            repeat: -1,
+            yoyo: true
+        });
+        
         this.markers[key] = {
             group: markerGroup,
             sphere: sphere,
             light: light,
-            material: sphereMaterial
+            material: sphereMaterial,
+            ring: ring,
+            innerRing: innerRing
         };
         
         this.scene.add(markerGroup);

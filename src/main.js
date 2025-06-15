@@ -5,10 +5,10 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
 import { gsap } from 'gsap';
 import { WaveDataService } from './services/WaveDataService';
-import { OceanScene } from './components/OceanScene';
-import { LocationMarkers } from './components/LocationMarkers';
-import { UIController } from './components/UIController';
-import { ForecastChart } from './components/ForecastChart';
+import { PhotorealisticOcean } from './components/PhotorealisticOcean';
+import { CinematicLocationSystem } from './components/CinematicLocationSystem';
+import { InnovativeForecastUI } from './components/InnovativeForecastUI';
+import './styles/photorealistic.css';
 
 class WaveForecastApp {
     constructor() {
@@ -17,20 +17,19 @@ class WaveForecastApp {
         
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(
-            75,
+            60,
             window.innerWidth / window.innerHeight,
             0.1,
-            10000
+            2000
         );
         
         this.renderer = new THREE.WebGLRenderer({
             antialias: true,
-            alpha: true
+            alpha: false,
+            powerPreference: "high-performance"
         });
         
         this.clock = new THREE.Clock();
-        this.isPlaying = false;
-        this.currentTimeIndex = 0;
         this.forecastData = null;
         
         this.init();
@@ -39,14 +38,13 @@ class WaveForecastApp {
     async init() {
         this.setupRenderer();
         this.setupCamera();
-        this.setupLighting();
         this.setupPostProcessing();
         this.setupControls();
         
-        this.oceanScene = new OceanScene(this.scene);
-        this.locationMarkers = new LocationMarkers(this.scene);
-        this.uiController = new UIController(this);
-        this.forecastChart = new ForecastChart(this.scene, this);
+        // Initialize photorealistic components
+        this.ocean = new PhotorealisticOcean(this.scene);
+        this.locationSystem = new CinematicLocationSystem(this.scene);
+        this.forecastUI = new InnovativeForecastUI();
         
         this.waveDataService = new WaveDataService();
         
@@ -55,58 +53,48 @@ class WaveForecastApp {
         this.setupEventListeners();
         this.hideLoading();
         this.animate();
+        
+        // Start with cinematic intro
+        this.cinematicIntro();
     }
 
     setupRenderer() {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        
+        // Photorealistic rendering settings
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 0.5;
+        this.renderer.toneMappingExposure = 1.0;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        // Enable logarithmic depth buffer for large scenes
+        this.renderer.logarithmicDepthBuffer = true;
+        
         this.container.appendChild(this.renderer.domElement);
     }
 
     setupCamera() {
-        this.camera.position.set(0, 50, 150);
+        // Cinematic camera position
+        this.camera.position.set(0, 30, 200);
         this.camera.lookAt(0, 0, 0);
-    }
-
-    setupLighting() {
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-        this.scene.add(ambientLight);
         
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
-        sunLight.position.set(100, 100, 50);
-        sunLight.castShadow = true;
-        sunLight.shadow.camera.left = -200;
-        sunLight.shadow.camera.right = 200;
-        sunLight.shadow.camera.top = 200;
-        sunLight.shadow.camera.bottom = -200;
-        sunLight.shadow.camera.near = 0.5;
-        sunLight.shadow.camera.far = 500;
-        sunLight.shadow.mapSize.width = 2048;
-        sunLight.shadow.mapSize.height = 2048;
-        this.scene.add(sunLight);
-        
-        const moonLight = new THREE.PointLight(0x6699ff, 0.3);
-        moonLight.position.set(-100, 80, -50);
-        this.scene.add(moonLight);
-        
-        const rimLight = new THREE.DirectionalLight(0x00ccff, 0.3);
-        rimLight.position.set(-50, 20, 100);
-        this.scene.add(rimLight);
+        // Set appropriate near/far planes
+        this.camera.near = 0.1;
+        this.camera.far = 2000;
+        this.camera.updateProjectionMatrix();
     }
 
     setupPostProcessing() {
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
+        // Subtle bloom for photorealism
         const bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.3,
-            0.4,
-            0.85
+            0.5, // strength
+            0.8, // radius
+            0.85 // threshold
         );
         this.composer.addPass(bloomPass);
     }
@@ -115,17 +103,23 @@ class WaveForecastApp {
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
-        this.controls.minDistance = 50;
+        this.controls.minDistance = 20;
         this.controls.maxDistance = 500;
+        
+        // Limit vertical rotation for realism
         this.controls.maxPolarAngle = Math.PI * 0.48;
-        this.controls.minPolarAngle = Math.PI * 0.1;
+        this.controls.minPolarAngle = Math.PI * 0.02;
+        
+        // Enable auto-rotation for cinematic effect
+        this.controls.autoRotate = true;
+        this.controls.autoRotateSpeed = 0.2;
     }
 
     async loadInitialData() {
         try {
             const [smithPointData, brickData] = await Promise.all([
-                this.waveDataService.getWaveData(40.5897, -72.8675), // Smith Point coordinates
-                this.waveDataService.getWaveData(40.0573, -74.1097)  // Brick coordinates
+                this.waveDataService.getWaveData(40.5897, -72.8675), // Smith Point
+                this.waveDataService.getWaveData(40.0573, -74.1097)  // Brick
             ]);
             
             this.forecastData = {
@@ -134,9 +128,7 @@ class WaveForecastApp {
             };
             
             this.updateVisualization();
-            this.uiController.updateLocationData('smith-point', smithPointData.current);
-            this.uiController.updateLocationData('brick', brickData.current);
-            this.forecastChart.updateForecast(this.forecastData);
+            this.forecastUI.updateForecast(this.forecastData);
         } catch (error) {
             console.error('Error loading wave data:', error);
         }
@@ -145,105 +137,116 @@ class WaveForecastApp {
     updateVisualization() {
         if (!this.forecastData) return;
         
-        const timeData = this.getCurrentTimeData();
+        // Get current conditions for both locations
+        const smithPointCurrent = this.forecastData.smithPoint.current;
+        const brickCurrent = this.forecastData.brick.current;
         
-        this.oceanScene.updateWaveConditions({
-            waveHeight: Math.max(timeData.smithPoint.waveHeight, timeData.brick.waveHeight),
-            wavePeriod: Math.max(timeData.smithPoint.wavePeriod, timeData.brick.wavePeriod),
-            windSpeed: Math.max(timeData.smithPoint.windSpeed, timeData.brick.windSpeed),
-            windDirection: timeData.smithPoint.windDirection
-        });
+        // Use the larger wave height for ocean visualization
+        const maxConditions = {
+            waveHeight: Math.max(smithPointCurrent.waveHeight, brickCurrent.waveHeight),
+            wavePeriod: Math.max(smithPointCurrent.wavePeriod, brickCurrent.wavePeriod),
+            windSpeed: Math.max(smithPointCurrent.windSpeed, brickCurrent.windSpeed),
+            windDirection: smithPointCurrent.windDirection
+        };
         
-        this.locationMarkers.updateConditions('smithPoint', timeData.smithPoint);
-        this.locationMarkers.updateConditions('brick', timeData.brick);
+        this.ocean.updateWaveConditions(maxConditions);
         
-        this.uiController.updateLocationData('smith-point', timeData.smithPoint);
-        this.uiController.updateLocationData('brick', timeData.brick);
-        this.uiController.updateTimeline(this.currentTimeIndex);
+        // Update location glows based on conditions
+        this.locationSystem.updateConditions('smithPoint', smithPointCurrent);
+        this.locationSystem.updateConditions('brick', brickCurrent);
     }
 
-    getCurrentTimeData() {
-        const smithPointForecast = this.forecastData.smithPoint.forecast[this.currentTimeIndex];
-        const brickForecast = this.forecastData.brick.forecast[this.currentTimeIndex];
+    cinematicIntro() {
+        // Disable controls during intro
+        this.controls.enabled = false;
         
-        return {
-            smithPoint: smithPointForecast,
-            brick: brickForecast
-        };
+        // Start from aerial view
+        this.camera.position.set(0, 300, 300);
+        this.camera.lookAt(0, 0, 0);
+        
+        // Cinematic camera movement
+        const timeline = gsap.timeline({
+            onComplete: () => {
+                this.controls.enabled = true;
+            }
+        });
+        
+        timeline
+            .to(this.camera.position, {
+                x: 150,
+                y: 50,
+                z: 200,
+                duration: 4,
+                ease: "power2.inOut"
+            })
+            .to(this.camera.position, {
+                x: 0,
+                y: 30,
+                z: 150,
+                duration: 3,
+                ease: "power2.inOut"
+            }, "-=1");
     }
 
     setupEventListeners() {
         window.addEventListener('resize', () => this.onWindowResize());
         
-        document.getElementById('prev-time').addEventListener('click', () => {
-            this.currentTimeIndex = Math.max(0, this.currentTimeIndex - 1);
-            this.updateVisualization();
+        // Location change from UI
+        window.addEventListener('locationChange', (e) => {
+            this.locationSystem.focusLocation(e.detail, this.camera, this.controls);
         });
         
-        document.getElementById('next-time').addEventListener('click', () => {
-            const maxIndex = this.forecastData.smithPoint.forecast.length - 1;
-            this.currentTimeIndex = Math.min(maxIndex, this.currentTimeIndex + 1);
-            this.updateVisualization();
-        });
-        
-        document.getElementById('play-pause').addEventListener('click', (e) => {
-            this.isPlaying = !this.isPlaying;
-            e.target.textContent = this.isPlaying ? '⏸' : '▶';
-            
-            if (this.isPlaying) {
-                this.startTimelineAnimation();
+        // Keyboard controls for cinematic views
+        window.addEventListener('keypress', (e) => {
+            switch(e.key) {
+                case '1':
+                    this.setCinematicView('overview');
+                    break;
+                case '2':
+                    this.setCinematicView('wave');
+                    break;
+                case '3':
+                    this.setCinematicView('aerial');
+                    break;
             }
         });
-        
-        document.querySelectorAll('.control-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const view = e.target.dataset.view;
-                this.switchView(view);
-                
-                document.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-            });
-        });
     }
 
-    startTimelineAnimation() {
-        if (!this.isPlaying) return;
+    setCinematicView(view) {
+        this.controls.autoRotate = false;
         
-        setTimeout(() => {
-            const maxIndex = this.forecastData.smithPoint.forecast.length - 1;
-            this.currentTimeIndex = (this.currentTimeIndex + 1) % (maxIndex + 1);
-            this.updateVisualization();
-            this.startTimelineAnimation();
-        }, 2000);
-    }
-
-    switchView(view) {
         switch(view) {
-            case '3d':
+            case 'overview':
                 gsap.to(this.camera.position, {
                     x: 0,
-                    y: 50,
+                    y: 30,
                     z: 150,
-                    duration: 1.5,
+                    duration: 2,
+                    ease: "power2.inOut",
+                    onComplete: () => {
+                        this.controls.autoRotate = true;
+                    }
+                });
+                break;
+            case 'wave':
+                gsap.to(this.camera.position, {
+                    x: 50,
+                    y: 5,
+                    z: 50,
+                    duration: 2,
                     ease: "power2.inOut"
                 });
                 break;
-            case 'map':
+            case 'aerial':
                 gsap.to(this.camera.position, {
                     x: 0,
                     y: 200,
                     z: 0,
-                    duration: 1.5,
-                    ease: "power2.inOut"
-                });
-                break;
-            case 'split':
-                gsap.to(this.camera.position, {
-                    x: 100,
-                    y: 100,
-                    z: 100,
-                    duration: 1.5,
-                    ease: "power2.inOut"
+                    duration: 2,
+                    ease: "power2.inOut",
+                    onUpdate: () => {
+                        this.camera.lookAt(0, 0, 0);
+                    }
                 });
                 break;
         }
@@ -252,7 +255,7 @@ class WaveForecastApp {
     hideLoading() {
         gsap.to(this.loadingElement, {
             opacity: 0,
-            duration: 0.5,
+            duration: 1,
             onComplete: () => {
                 this.loadingElement.style.display = 'none';
             }
@@ -274,20 +277,47 @@ class WaveForecastApp {
         
         this.controls.update();
         
-        if (this.oceanScene) {
-            this.oceanScene.update(elapsedTime);
+        // Update ocean with camera position for proper reflections
+        if (this.ocean) {
+            this.ocean.update(elapsedTime, this.camera);
         }
         
-        if (this.locationMarkers) {
-            this.locationMarkers.update(elapsedTime);
+        // Update location system
+        if (this.locationSystem) {
+            this.locationSystem.update(elapsedTime);
         }
         
-        if (this.forecastChart) {
-            this.forecastChart.update(elapsedTime);
-        }
-        
+        // Render with post-processing
         this.composer.render();
     }
 }
 
+// Create cinematic view controls
+const createCinematicControls = () => {
+    const controls = document.createElement('div');
+    controls.className = 'cinematic-controls';
+    controls.innerHTML = `
+        <button class="view-btn" title="Overview" data-view="overview">🌊</button>
+        <button class="view-btn" title="Wave Level" data-view="wave">🏄</button>
+        <button class="view-btn" title="Aerial" data-view="aerial">🚁</button>
+    `;
+    document.getElementById('ui-overlay').appendChild(controls);
+    
+    controls.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const view = e.currentTarget.dataset.view;
+            window.dispatchEvent(new KeyboardEvent('keypress', { key: 
+                view === 'overview' ? '1' : 
+                view === 'wave' ? '2' : '3'
+            }));
+            
+            // Update active state
+            controls.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+        });
+    });
+};
+
+// Initialize app
 const app = new WaveForecastApp();
+createCinematicControls();

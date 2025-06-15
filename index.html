@@ -261,6 +261,90 @@
             border-color: #00a8ff;
         }
 
+        #forecast-chart {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            pointer-events: all;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #forecast-chart h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #00ccff;
+        }
+
+        .forecast-bars {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            height: 120px;
+        }
+
+        .forecast-day {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .forecast-bar {
+            width: 40px;
+            background: linear-gradient(to top, #0066cc, #00aaff);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            transition: all 0.3s ease;
+            min-height: 10px;
+        }
+
+        .forecast-bar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 170, 255, 0.4);
+        }
+
+        .forecast-bar.excellent {
+            background: linear-gradient(to top, #cc8800, #ffcc00);
+        }
+
+        .forecast-bar.good {
+            background: linear-gradient(to top, #00cc66, #00ff88);
+        }
+
+        .forecast-bar.fair {
+            background: linear-gradient(to top, #0066cc, #00aaff);
+        }
+
+        .forecast-bar.poor {
+            background: linear-gradient(to top, #cc3333, #ff6666);
+        }
+
+        .forecast-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .forecast-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
         @media (max-width: 768px) {
             .location-card {
                 position: relative;
@@ -280,6 +364,22 @@
                 top: 10px;
                 flex-wrap: wrap;
                 padding: 10px 15px;
+            }
+
+            #forecast-chart {
+                bottom: 100px;
+                padding: 15px;
+                width: calc(100% - 20px);
+                margin: 0 10px;
+            }
+
+            .forecast-bars {
+                gap: 10px;
+                height: 80px;
+            }
+
+            .forecast-bar {
+                width: 30px;
             }
         }
     </style>
@@ -341,6 +441,13 @@
                 </div>
             </div>
             <div class="surf-quality">Loading...</div>
+        </div>
+
+        <div id="forecast-chart">
+            <h3>7-Day Wave Forecast</h3>
+            <div class="forecast-bars" id="forecast-bars">
+                <!-- Bars will be dynamically generated -->
+            </div>
         </div>
 
         <div id="timeline">

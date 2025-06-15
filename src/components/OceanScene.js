@@ -31,8 +31,8 @@ export class OceanScene {
             uniforms: {
                 time: { value: 0 },
                 waveHeight: { value: 2.0 },
-                waterColor: { value: new THREE.Color(0x006994) },
-                waterDeep: { value: new THREE.Color(0x001122) },
+                waterColor: { value: new THREE.Color(0x00a6d6) },
+                waterDeep: { value: new THREE.Color(0x004466) },
                 sunColor: { value: new THREE.Color(0xffffff) },
                 sunDirection: { value: new THREE.Vector3(0.70707, 0.70707, 0).normalize() },
                 foamThreshold: { value: 0.8 }
@@ -47,28 +47,25 @@ export class OceanScene {
                 varying vec2 vUv;
                 varying vec3 vWorldPos;
                 
-                // Improved wave function
+                // Improved wave function with clearer, more readable waves
                 vec3 getWaveHeight(vec2 pos, float t) {
                     vec3 wavePos = vec3(0.0);
                     
-                    // Large rolling waves
-                    float wave1 = sin(pos.x * 0.02 + t * 0.8) * cos(pos.y * 0.02 + t * 0.6);
-                    float wave2 = sin(pos.x * 0.03 - t * 1.1) * cos(pos.y * 0.04 + t * 0.9);
-                    float wave3 = sin(pos.x * 0.01 + pos.y * 0.01 + t * 0.5) * 1.5;
+                    // Primary swell - dominant wave pattern
+                    float primaryWave = sin(pos.x * 0.015 + t * 0.7) * cos(pos.y * 0.015 + t * 0.5) * 1.8;
                     
-                    // Medium waves
-                    float wave4 = sin(pos.x * 0.06 + t * 1.8) * cos(pos.y * 0.08 - t * 1.6) * 0.6;
-                    float wave5 = sin(pos.x * 0.1 - pos.y * 0.1 + t * 2.4) * 0.4;
+                    // Secondary swell - cross waves
+                    float secondaryWave = sin(pos.x * 0.025 - pos.y * 0.02 + t * 0.9) * 0.8;
                     
-                    // Small detail waves
-                    float wave6 = sin(pos.x * 0.3 + t * 3.0) * sin(pos.y * 0.3 + t * 2.5) * 0.2;
-                    float wave7 = sin(pos.x * 0.5 - t * 4.0) * sin(pos.y * 0.4 + t * 3.5) * 0.1;
+                    // Wind chop - smaller surface detail
+                    float chopWave = sin(pos.x * 0.08 + t * 2.0) * cos(pos.y * 0.08 - t * 1.8) * 0.3;
                     
-                    float height = (wave1 + wave2 + wave3 + wave4 + wave5 + wave6 + wave7) * waveHeight;
+                    // Combine waves with proper scaling
+                    float height = (primaryWave + secondaryWave + chopWave) * waveHeight;
                     
-                    // Add some displacement for more realistic waves
-                    float xDisplace = cos(pos.x * 0.05 + t) * sin(pos.y * 0.05 + t * 0.8) * waveHeight * 0.3;
-                    float yDisplace = sin(pos.x * 0.05 - t * 0.9) * cos(pos.y * 0.05 + t) * waveHeight * 0.3;
+                    // Simplified displacement for clearer wave motion
+                    float xDisplace = sin(pos.x * 0.02 + t * 0.6) * waveHeight * 0.2;
+                    float yDisplace = cos(pos.y * 0.02 + t * 0.5) * waveHeight * 0.2;
                     
                     return vec3(xDisplace, yDisplace, height);
                 }
@@ -226,7 +223,7 @@ export class OceanScene {
 
     addFog() {
         // Add atmospheric fog
-        this.scene.fog = new THREE.FogExp2(0xaabbcc, 0.0015);
+        this.scene.fog = new THREE.FogExp2(0xb0c4de, 0.0008);
     }
 
     addParticles() {
